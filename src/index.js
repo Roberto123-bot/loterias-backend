@@ -1,8 +1,54 @@
 require("dotenv").config(); // No topo do arquivo
 const express = require("express");
+const cors = require("cors"); // ⭐ ADICIONAR ESTA LINHA
 const app = express();
 const pool = require("./config/database");
 const errorHandler = require("./middlewares/errorHandler");
+
+// ============================================
+// CONFIGURAÇÃO DE CORS - MUITO IMPORTANTE! ⭐
+// ============================================
+const allowedOrigins = [
+  process.env.FRONTEND_URL, // Vercel (produção)
+  "https://loterias-frontend.vercel.app", // Backup hardcoded
+  "http://localhost:3000", // Desenvolvimento
+  "http://localhost:5173", // Vite dev
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+];
+
+// Remover valores undefined/null
+const validOrigins = allowedOrigins.filter(
+  (origin) => origin && origin.trim() !== ""
+);
+
+console.log("✅ CORS configurado para:", validOrigins);
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Permitir requests sem origin (mobile apps, curl, etc)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Verificar se origin está na lista
+      if (validOrigins.indexOf(origin) === -1) {
+        console.warn(`⚠️ Origin bloqueada pelo CORS: ${origin}`);
+        return callback(
+          new Error(`Origin não permitida pelo CORS: ${origin}`),
+          false
+        );
+      }
+
+      console.log(`✅ Origin permitida: ${origin}`);
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 // ============================================
 // IMPORTAR ROTAS DE AUTENTICAÇÃO
@@ -28,7 +74,6 @@ const maismilionariaRoutes = require("./routes/maismilionariaRoutes");
 const usuarioRoutes = require("./routes/usuarioRoutes");
 const planosRoutes = require("./routes/planosRoutes");
 
-// ⭐⭐⭐ ADICIONAR ESTA SEÇÃO ⭐⭐⭐
 // ============================================
 // IMPORTAR ROTAS ADMIN
 // ============================================
@@ -65,7 +110,6 @@ app.use("/usuarios", usuarioRoutes);
 // ============================================
 app.use("/api/planos", planosRoutes);
 
-// ⭐⭐⭐ ADICIONAR ESTA SEÇÃO ⭐⭐⭐
 // ============================================
 // ROTAS ADMIN
 // ============================================
@@ -83,6 +127,11 @@ app.get("/", (req, res) => {
   res.json({
     message: "🎰 API de Loterias - Node.js + PostgreSQL + Docker",
     version: "3.0.0",
+    cors: {
+      enabled: true,
+      allowedOrigins: validOrigins,
+      frontendUrl: process.env.FRONTEND_URL || "não configurado",
+    },
     features: [
       "✅ Sistema de autenticação JWT",
       "✅ Planos FREE e PRÓ",
@@ -90,7 +139,7 @@ app.get("/", (req, res) => {
       "✅ 8 loterias brasileiras",
       "✅ Estatísticas e análises",
       "✅ Conferência de jogos (PRÓ)",
-      "✅ Painel Administrativo", // ⭐ NOVO
+      "✅ Painel Administrativo",
     ],
     loterias: {
       lotofacil: {
@@ -145,7 +194,7 @@ app.get("/", (req, res) => {
       upgrade: "POST /api/planos/upgrade",
       recursos: "GET /api/planos/recursos",
 
-      // Admin (NOVO)
+      // Admin
       adminDashboard: "GET /api/admin/dashboard [ADMIN]",
       adminUsuarios: "GET /api/admin/usuarios [ADMIN]",
       adminAtivar: "POST /api/admin/usuarios/:id/ativar [ADMIN]",
@@ -269,7 +318,7 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 
 const isProduction = NODE_ENV === "production";
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log("\n" + "=".repeat(50));
   console.log("🎰 SISTEMA DE LOTERIAS - API REST");
   console.log("=".repeat(50));
@@ -295,6 +344,11 @@ app.listen(PORT, () => {
   console.log("   ✅ Estatísticas e análises");
   console.log("   ✅ Painel Administrativo");
 
+  console.log("\n🌐 CORS configurado para:");
+  validOrigins.forEach((origin) => {
+    console.log(`   ✅ ${origin}`);
+  });
+
   console.log("\n⏰ Iniciando agendador de atualizações...");
   console.log("🔐 JWT configurado:", !!process.env.JWT_SECRET);
 
@@ -302,7 +356,7 @@ app.listen(PORT, () => {
   if (process.env.ENABLE_CRON === "true") {
     iniciarAgendador();
   } else {
-    console.log("⏸️ Agendador desativado");
+    console.log("⏸️  Agendador desativado");
   }
 
   console.log("=".repeat(50) + "\n");
