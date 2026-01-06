@@ -21,139 +21,96 @@ router.get("/ultimos-todos", async (req, res) => {
     }
 
     const query = `
-      SELECT *
-      FROM (
-        SELECT
-          'megasena' AS loteria,
-          concurso,
-          dezenas,
-          NULL::int[]  AS dezenas_2,
-          NULL::int[]  AS trevos,
-          NULL::text   AS mes_sorte,
-          NULL::text   AS time_coracao
+      WITH
+      m AS (
+        SELECT 'megasena' AS loteria, concurso, dezenas,
+              NULL::int[] AS dezenas_2,
+              NULL::int[] AS trevos,
+              NULL::text  AS mes_sorte,
+              NULL::text  AS time_coracao
         FROM megasena
         ORDER BY concurso DESC
         LIMIT 1
-      ) t1
-
-      UNION ALL
-
-      SELECT *
-      FROM (
-        SELECT
-          'lotofacil',
-          concurso,
-          dezenas,
-          NULL::int[],
-          NULL::int[],
-          mes_sorte,
-          NULL::text
+      ),
+      lf AS (
+        SELECT 'lotofacil', concurso, dezenas,
+              NULL::int[],
+              NULL::int[],
+              NULL::text,
+              NULL::text
         FROM lotofacil
         ORDER BY concurso DESC
         LIMIT 1
-      ) t2
-
-      UNION ALL
-
-      SELECT *
-      FROM (
-        SELECT
-          'quina',
-          concurso,
-          dezenas,
-          NULL::int[],
-          NULL::int[],
-          NULL::text,
-          NULL::text
+      ),
+      q AS (
+        SELECT 'quina', concurso, dezenas,
+              NULL::int[],
+              NULL::int[],
+              NULL::text,
+              NULL::text
         FROM quina
         ORDER BY concurso DESC
         LIMIT 1
-      ) t3
-
-      UNION ALL
-
-      SELECT *
-      FROM (
-        SELECT
-          'lotomania',
-          concurso,
-          dezenas,
-          NULL::int[],
-          NULL::int[],
-          NULL::text,
-          NULL::text
+      ),
+      lm AS (
+        SELECT 'lotomania', concurso, dezenas,
+              NULL::int[],
+              NULL::int[],
+              NULL::text,
+              NULL::text
         FROM lotomania
         ORDER BY concurso DESC
         LIMIT 1
-      ) t4
-
-      UNION ALL
-
-      SELECT *
-      FROM (
-        SELECT
-          'duplasena',
-          concurso,
-          dezenas_1 AS dezenas,
-          dezenas_2,
-          NULL::int[],
-          NULL::text,
-          NULL::text
+      ),
+      ds AS (
+        SELECT 'duplasena', concurso, dezenas_1 AS dezenas,
+              dezenas_2,
+              NULL::int[],
+              NULL::text,
+              NULL::text
         FROM duplasena
         ORDER BY concurso DESC
         LIMIT 1
-      ) t5
-
-      UNION ALL
-
-      SELECT *
-      FROM (
-        SELECT
-          'timemania',
-          concurso,
-          dezenas,
-          NULL::int[],
-          NULL::int[],
-          NULL::text,
-          time_coracao
+      ),
+      tm AS (
+        SELECT 'timemania', concurso, dezenas,
+              NULL::int[],
+              NULL::int[],
+              NULL::text,
+              time_coracao
         FROM timemania
         ORDER BY concurso DESC
         LIMIT 1
-      ) t6
-
-      UNION ALL
-
-      SELECT *
-      FROM (
-        SELECT
-          'diadasorte',
-          concurso,
-          dezenas,
-          NULL::int[],
-          NULL::int[],
-          mes_sorte,
-          NULL::text
+      ),
+      dd AS (
+        SELECT 'diadasorte', concurso, dezenas,
+              NULL::int[],
+              NULL::int[],
+              mes_sorte,
+              NULL::text
         FROM diadasorte
         ORDER BY concurso DESC
         LIMIT 1
-      ) t7
-
-      UNION ALL
-
-      SELECT *
-      FROM (
-        SELECT
-          'maismilionaria',
-          concurso,
-          dezenas,
-          NULL::int[],
-          trevos,
-          NULL::text,
-          NULL::text
+      ),
+      mm AS (
+        SELECT 'maismilionaria', concurso, dezenas,
+              NULL::int[],
+              trevos,
+              NULL::text,
+              NULL::text
         FROM maismilionaria
         ORDER BY concurso DESC
         LIMIT 1
-      ) t8
+      )
+
+      SELECT * FROM m
+      UNION ALL SELECT * FROM lf
+      UNION ALL SELECT * FROM q
+      UNION ALL SELECT * FROM lm
+      UNION ALL SELECT * FROM ds
+      UNION ALL SELECT * FROM tm
+      UNION ALL SELECT * FROM dd
+      UNION ALL SELECT * FROM mm;
     `;
 
     const result = await pool.query(query);
