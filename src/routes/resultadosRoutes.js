@@ -20,103 +20,22 @@ router.get("/ultimos-todos", async (req, res) => {
       });
     }
 
-    // Buscar do banco (query otimizada)
     const query = `
-(
-  SELECT 'megasena' AS loteria,
-         concurso,
-         data_sorteio,
-         dezenas,
-         acumulou,
-         valor_acumulado
-  FROM megasena
-  ORDER BY concurso DESC
-  LIMIT 1
-)
-UNION ALL
-(
-  SELECT 'lotofacil',
-         concurso,
-         data_sorteio,
-         dezenas,
-         acumulou,
-         valor_acumulado
-  FROM lotofacil
-  ORDER BY concurso DESC
-  LIMIT 1
-)
-UNION ALL
-(
-  SELECT 'quina',
-         concurso,
-         data_sorteio,
-         dezenas,
-         acumulou,
-         valor_acumulado
-  FROM quina
-  ORDER BY concurso DESC
-  LIMIT 1
-)
-UNION ALL
-(
-  SELECT 'lotomania',
-         concurso,
-         data_sorteio,
-         dezenas,
-         acumulou,
-         valor_acumulado
-  FROM lotomania
-  ORDER BY concurso DESC
-  LIMIT 1
-)
-UNION ALL
-(
-  SELECT 'duplasena',
-         concurso,
-         data_sorteio,
-         dezenas_sorteio1 AS dezenas,
-         acumulou,
-         valor_acumulado
-  FROM duplasena
-  ORDER BY concurso DESC
-  LIMIT 1
-)
-UNION ALL
-(
-  SELECT 'timemania',
-         concurso,
-         data_sorteio,
-         dezenas,
-         acumulou,
-         valor_acumulado
-  FROM timemania
-  ORDER BY concurso DESC
-  LIMIT 1
-)
-UNION ALL
-(
-  SELECT 'diadasorte',
-         concurso,
-         data_sorteio,
-         dezenas,
-         acumulou,
-         valor_acumulado
-  FROM diadasorte
-  ORDER BY concurso DESC
-  LIMIT 1
-)
-UNION ALL
-(
-  SELECT 'maismilionaria',
-         concurso,
-         data_sorteio,
-         dezenas,
-         acumulou,
-         valor_acumulado
-  FROM maismilionaria
-  ORDER BY concurso DESC
-  LIMIT 1
-)
+  (SELECT 'megasena' AS loteria, concurso, dezenas, NULL::int[] AS dezenas_2, NULL::int[] AS trevos, NULL::text AS mes_sorte, NULL::text AS time_coracao FROM megasena ORDER BY concurso DESC LIMIT 1)
+  UNION ALL
+  (SELECT 'lotofacil', concurso, dezenas, NULL, NULL, mes_sorte, NULL FROM lotofacil ORDER BY concurso DESC LIMIT 1)
+  UNION ALL
+  (SELECT 'quina', concurso, dezenas, NULL, NULL, NULL, NULL FROM quina ORDER BY concurso DESC LIMIT 1)
+  UNION ALL
+  (SELECT 'lotomania', concurso, dezenas, NULL, NULL, NULL, NULL FROM lotomania ORDER BY concurso DESC LIMIT 1)
+  UNION ALL
+  (SELECT 'duplasena', concurso, dezenas_1 AS dezenas, dezenas_2, NULL, NULL, NULL FROM duplasena ORDER BY concurso DESC LIMIT 1)
+  UNION ALL
+  (SELECT 'timemania', concurso, dezenas, NULL, NULL, NULL, time_coracao FROM timemania ORDER BY concurso DESC LIMIT 1)
+  UNION ALL
+  (SELECT 'diadasorte', concurso, dezenas, NULL, NULL, mes_sorte, NULL FROM diadasorte ORDER BY concurso DESC LIMIT 1)
+  UNION ALL
+  (SELECT 'maismilionaria', concurso, dezenas, NULL, trevos, NULL, NULL FROM maismilionaria ORDER BY concurso DESC LIMIT 1)
 `;
 
     const result = await pool.query(query);
