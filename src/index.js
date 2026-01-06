@@ -4,6 +4,7 @@ const cors = require("cors"); // ⭐ ADICIONAR ESTA LINHA
 const app = express();
 const pool = require("./config/database");
 const errorHandler = require("./middlewares/errorHandler");
+const resultadosRoutes = require("./routes/resultadosRoutes");
 
 // ============================================
 // CONFIGURAÇÃO DE CORS - MUITO IMPORTANTE! ⭐
@@ -107,6 +108,7 @@ app.use((req, res, next) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/jogos", jogosRoutes);
 app.use("/usuarios", usuarioRoutes);
+app.use("/api/resultados", resultadosRoutes);
 
 // ============================================
 // ROTAS DE PLANOS
