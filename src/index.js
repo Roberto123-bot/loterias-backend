@@ -15,6 +15,9 @@ const allowedOrigins = [
   "http://localhost:5173", // Vite dev
   "http://127.0.0.1:3000",
   "http://127.0.0.1:5173",
+  // 🔥 ADICIONE ESTAS DUAS
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
 ];
 
 // Remover valores undefined/null
@@ -353,7 +356,9 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log("🔐 JWT configurado:", !!process.env.JWT_SECRET);
 
   // Iniciar agendador de atualizações
-  if (process.env.ENABLE_CRON === "true") {
+  const isDev = NODE_ENV === "development";
+
+  if (process.env.ENABLE_CRON === "true" || isDev) {
     iniciarAgendador();
   } else {
     console.log("⏸️  Agendador desativado");
