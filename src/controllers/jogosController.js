@@ -694,14 +694,14 @@ const salvarJogosLote = async (req, res) => {
 
     // Configurações de validação por loteria
     const config = {
-      megasena: { min: 6, max: 15, total: 60 },
-      lotofacil: { min: 15, max: 18, total: 25 },
-      quina: { min: 5, max: 15, total: 80 },
-      lotomania: { min: 50, max: 50, total: 100 },
-      duplasena: { min: 6, max: 15, total: 50 },
-      timemania: { min: 10, max: 10, total: 80 },
-      diadasorte: { min: 7, max: 15, total: 31 },
-      maismilionaria: { min: 6, max: 12, total: 50 },
+      megasena: { min: 6, max: 60, total: 60 },
+      lotofacil: { min: 15, max: 25, total: 25 },
+      quina: { min: 5, max: 80, total: 80 },
+      lotomania: { min: 50, max: 100, total: 100 },
+      duplasena: { min: 6, max: 50, total: 50 },
+      timemania: { min: 7, max: 80, total: 80 },
+      diadasorte: { min: 7, max: 31, total: 31 },
+      maismilionaria: { min: 6, max: 50, total: 50 },
     };
 
     const loteriaConfig = config[loteria];
