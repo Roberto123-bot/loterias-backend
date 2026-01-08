@@ -16,9 +16,11 @@ const allowedOrigins = [
   "http://localhost:5173", // Vite dev
   "http://127.0.0.1:3000",
   "http://127.0.0.1:5173",
-  // 🔥 ADICIONE ESTAS DUAS
   "http://localhost:5500",
   "http://127.0.0.1:5500",
+  "https://loterias-frontend.vercel.app",
+  "https://robertoloterias.com.br",
+  "https://www.robertoloterias.com.br",
 ];
 
 // Remover valores undefined/null
