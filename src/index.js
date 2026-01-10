@@ -5,6 +5,7 @@ const app = express();
 const pool = require("./config/database");
 const errorHandler = require("./middlewares/errorHandler");
 const resultadosRoutes = require("./routes/resultadosRoutes");
+const loteriasRoutes = require("./routes/loteriasRoutes");
 
 // ============================================
 // CONFIGURAÇÃO DE CORS - MUITO IMPORTANTE! ⭐
@@ -111,6 +112,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/jogos", jogosRoutes);
 app.use("/usuarios", usuarioRoutes);
 app.use("/api/resultados", resultadosRoutes);
+app.use("/api/loterias", loteriasRoutes);
 
 // ============================================
 // ROTAS DE PLANOS
