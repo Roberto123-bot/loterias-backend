@@ -1,7 +1,9 @@
 const express = require("express");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const pool = require("../config/database");
+const crypto = require("crypto");
+const { sendEmail } = require("../config/email");
 
 const router = express.Router();
 
@@ -264,6 +266,153 @@ router.get("/perfil", async (req, res) => {
     res.status(401).json({
       success: false,
       message: "Token inválido",
+    });
+  }
+});
+
+// ==========================================
+// ESQUECI MINHA SENHA
+// ==========================================
+// ==========================================
+// FORGOT PASSWORD
+// ==========================================
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email é obrigatório",
+      });
+    }
+
+    const result = await pool.query(
+      "SELECT id, nome, email FROM usuarios WHERE email = $1",
+      [email.toLowerCase()]
+    );
+
+    // ⚠️ Não revelar se usuário existe ou não
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        message: "Se o email existir, enviaremos instruções",
+      });
+    }
+
+    const usuario = result.rows[0];
+
+    // 🔐 Gerar token seguro
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+
+    await pool.query(
+      `
+      UPDATE usuarios
+      SET reset_token = $1,
+          reset_token_expires = $2
+      WHERE id = $3
+      `,
+      [resetToken, resetExpires, usuario.id]
+    );
+
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password.html?token=${resetToken}`;
+
+    // 📧 Enviar email
+    await sendEmail({
+      to: usuario.email,
+      subject: "Redefinição de senha - Roberto Loterias",
+      html: `
+        <h2>Olá, ${usuario.nome}</h2>
+        <p>Recebemos uma solicitação para redefinir sua senha.</p>
+        <p>Clique no botão abaixo para continuar:</p>
+        <p>
+          <a href="${resetLink}" 
+             style="display:inline-block;padding:12px 20px;background:#6C5CE7;color:#fff;text-decoration:none;border-radius:6px">
+            Redefinir senha
+          </a>
+        </p>
+        <p>Este link expira em 1 hora.</p>
+        <p>Se não foi você, ignore este email.</p>
+      `,
+      text: `Redefina sua senha: ${resetLink}`,
+    });
+
+    res.json({
+      success: true,
+      message: "Se o email existir, enviaremos instruções",
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro ao processar solicitação",
+    });
+  }
+});
+
+// ==========================================
+// RESET PASSWORD
+// ==========================================
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { token, senha } = req.body;
+
+    if (!token || !senha) {
+      return res.status(400).json({
+        success: false,
+        message: "Token e nova senha são obrigatórios",
+      });
+    }
+
+    if (senha.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Senha deve ter no mínimo 6 caracteres",
+      });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT id
+      FROM usuarios
+      WHERE reset_token = $1
+        AND reset_token_expires > NOW()
+      `,
+      [token]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Token inválido ou expirado",
+      });
+    }
+
+    const usuarioId = result.rows[0].id;
+
+    const senhaHash = await bcrypt.hash(senha, SALT_ROUNDS);
+
+    await pool.query(
+      `
+      UPDATE usuarios
+      SET senha = $1,
+          reset_token = NULL,
+          reset_token_expires = NULL
+      WHERE id = $2
+      `,
+      [senhaHash, usuarioId]
+    );
+
+    res.json({
+      success: true,
+      message: "Senha redefinida com sucesso",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro ao redefinir senha",
     });
   }
 });
