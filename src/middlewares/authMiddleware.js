@@ -5,8 +5,20 @@
 
 const jwt = require("jsonwebtoken");
 
+const PUBLIC_ROUTES = [
+  "/api/auth/login",
+  "/api/auth/registro",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+];
+
 const authMiddleware = (req, res, next) => {
   try {
+    // 🔓 LIBERAR ROTAS PÚBLICAS
+    if (PUBLIC_ROUTES.includes(req.path)) {
+      return next();
+    }
+
     // Buscar token no header Authorization
     const authHeader = req.headers.authorization;
 
