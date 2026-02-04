@@ -14,6 +14,22 @@ const authMiddleware = require("../middlewares/authMiddleware");
 router.use(authMiddleware);
 
 // ============================================
+// 📁 GRUPOS
+// ============================================
+router.get("/grupos", jogosController.listarGrupos);
+router.post("/grupos", jogosController.criarGrupo);
+router.put("/grupos", jogosController.renomearGrupo);
+router.delete("/grupos", jogosController.excluirGrupo);
+
+// ============================================
+// 🏷️ (se quiser manter por compatibilidade)
+// ============================================
+router.put("/nome", jogosController.atualizarNomeGrupo);
+router.delete("/nome", jogosController.removerNomeGrupo);
+
+
+
+// ============================================
 // CONFERÊNCIA AUTOMÁTICA
 // ============================================
 

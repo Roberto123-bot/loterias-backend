@@ -22,7 +22,7 @@ const LOTERIAS_CONFIG = {
   lotofacil: {
     nome: "Lotofácil",
     dezenas_min: 15,
-    dezenas_max: 20,
+    dezenas_max: 25,
     faixa_min: 1,
     faixa_max: 25,
     tem_trevo: false,
@@ -143,7 +143,7 @@ const salvarJogo = async (req, res) => {
 
     // Validar faixa
     const dezenasInvalidas = dezenas.filter(
-      (d) => d < config.faixa_min || d > config.faixa_max
+      (d) => d < config.faixa_min || d > config.faixa_max,
     );
     if (dezenasInvalidas.length > 0) {
       return res.status(400).json({
@@ -192,7 +192,7 @@ const salvarJogo = async (req, res) => {
         mesSorte || null,
         timeCoracao || null,
         observacoes || null,
-      ]
+      ],
     );
 
     const response = result.rows[0];
@@ -338,7 +338,7 @@ const getJogo = async (req, res) => {
 
     const result = await pool.query(
       "SELECT * FROM vw_meus_jogos WHERE id = $1 AND usuario_id = $2",
-      [id, usuarioId]
+      [id, usuarioId],
     );
 
     if (result.rows.length === 0) {
@@ -373,7 +373,7 @@ const atualizarJogo = async (req, res) => {
     // Verificar se o jogo pertence ao usuário
     const checkResult = await pool.query(
       "SELECT id FROM jogos_salvos WHERE id = $1 AND usuario_id = $2",
-      [id, usuarioId]
+      [id, usuarioId],
     );
 
     if (checkResult.rows.length === 0) {
@@ -392,7 +392,7 @@ const atualizarJogo = async (req, res) => {
            updated_at = NOW()
        WHERE id = $4 AND usuario_id = $5
        RETURNING *`,
-      [nomeJogo, favorito, observacoes, id, usuarioId]
+      [nomeJogo, favorito, observacoes, id, usuarioId],
     );
 
     res.json({
@@ -419,7 +419,7 @@ const excluirJogo = async (req, res) => {
 
     const result = await pool.query(
       "DELETE FROM jogos_salvos WHERE id = $1 AND usuario_id = $2 RETURNING *",
-      [id, usuarioId]
+      [id, usuarioId],
     );
 
     if (result.rows.length === 0) {
@@ -454,7 +454,7 @@ const conferirJogo = async (req, res) => {
     // Verificar se o jogo pertence ao usuário
     const checkResult = await pool.query(
       "SELECT id FROM jogos_salvos WHERE id = $1 AND usuario_id = $2",
-      [id, usuarioId]
+      [id, usuarioId],
     );
 
     if (checkResult.rows.length === 0) {
@@ -507,7 +507,7 @@ const getHistoricoConferencias = async (req, res) => {
     // Verificar se o jogo pertence ao usuário
     const checkResult = await pool.query(
       "SELECT id FROM jogos_salvos WHERE id = $1 AND usuario_id = $2",
-      [id, usuarioId]
+      [id, usuarioId],
     );
 
     if (checkResult.rows.length === 0) {
@@ -521,7 +521,7 @@ const getHistoricoConferencias = async (req, res) => {
       `SELECT * FROM historico_conferencias 
        WHERE jogo_id = $1 
        ORDER BY conferido_em DESC`,
-      [id]
+      [id],
     );
 
     res.json({
@@ -564,7 +564,7 @@ const gerarJogoAleatorio = async (req, res) => {
     // Gerar dezenas aleatórias
     const todosNumeros = Array.from(
       { length: config.faixa_max - config.faixa_min + 1 },
-      (_, i) => i + config.faixa_min
+      (_, i) => i + config.faixa_min,
     );
 
     const dezenas = [];
@@ -590,7 +590,7 @@ const gerarJogoAleatorio = async (req, res) => {
 
       for (let i = 0; i < 2; i++) {
         const randomIndex = Math.floor(
-          Math.random() * trevosDisponiveis.length
+          Math.random() * trevosDisponiveis.length,
         );
         trevos.push(trevosDisponiveis[randomIndex]);
         trevosDisponiveis.splice(randomIndex, 1);
@@ -644,7 +644,7 @@ const gerarJogoAleatorio = async (req, res) => {
 const salvarJogosLote = async (req, res) => {
   try {
     const usuarioId = req.usuario.id;
-    const { loteria, jogos } = req.body;
+    const { loteria, jogos, label } = req.body;
 
     console.log("📦 Salvamento em lote iniciado");
     console.log("👤 Usuário:", usuarioId);
@@ -706,61 +706,41 @@ const salvarJogosLote = async (req, res) => {
 
     const loteriaConfig = config[loteria];
 
-    // Validar e converter cada jogo
     const jogosValidados = [];
 
     for (let i = 0; i < jogos.length; i++) {
-      const jogoString = jogos[i];
-
-      // Converte string para array de números
-      const dezenas = jogoString
+      const dezenas = jogos[i]
         .split(" ")
-        .filter((d) => d.trim() !== "")
-        .map((d) => d.trim());
+        .map((d) => parseInt(d.trim()))
+        .filter((n) => !isNaN(n));
 
-      // Validações
+      // quantidade
       if (
         dezenas.length < loteriaConfig.min ||
         dezenas.length > loteriaConfig.max
       ) {
         return res.status(400).json({
           success: false,
-          message: `Jogo ${i + 1} inválido: ${loteria} deve ter entre ${
-            loteriaConfig.min
-          } e ${loteriaConfig.max} dezenas. Recebido: ${dezenas.length}`,
+          message: `Jogo ${i + 1} inválido: quantidade incorreta`,
         });
       }
 
-      // Verifica se todas as dezenas são números válidos
-      const dezenasNumericas = dezenas.map((d) => parseInt(d));
-      const dezenasInvalidas = dezenasNumericas.filter(
-        (d) => isNaN(d) || d < 1 || d > loteriaConfig.total
-      );
-
-      if (dezenasInvalidas.length > 0) {
+      // faixa
+      if (dezenas.some((d) => d < 1 || d > loteriaConfig.total)) {
         return res.status(400).json({
           success: false,
-          message: `Jogo ${
-            i + 1
-          } com dezenas inválidas. ${loteria} vai de 01 a ${loteriaConfig.total
-            .toString()
-            .padStart(2, "0")}.`,
+          message: `Jogo ${i + 1} contém dezenas inválidas`,
         });
       }
 
-      // Verifica duplicatas
+      // duplicadas
       if (new Set(dezenas).size !== dezenas.length) {
         return res.status(400).json({
           success: false,
-          message: `Jogo ${i + 1} com dezenas duplicadas.`,
+          message: `Jogo ${i + 1} possui dezenas duplicadas`,
         });
       }
 
-      // ============================================
-      // 🔧 CORREÇÃO: Converter para formato PostgreSQL
-      // ============================================
-      // Ao invés de passar a string "01 02 03"
-      // Passar o array: ["01", "02", "03"]
       jogosValidados.push(dezenas);
     }
 
@@ -773,15 +753,22 @@ const salvarJogosLote = async (req, res) => {
     const placeholders = [];
 
     jogosValidados.forEach((dezenasArray, index) => {
-      const offset = index * 3;
-      placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3})`);
+      const offset = index * 4; // ✅ 4 colunas
+      placeholders.push(
+        `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4})`,
+      );
 
       // Passa o ARRAY diretamente, não a string
-      valores.push(usuarioId, loteria, dezenasArray);
+      valores.push(
+        usuarioId,
+        loteria,
+        label?.trim() || `Jogo ${LOTERIAS_CONFIG[loteria].nome}`,
+        dezenasArray,
+      );
     });
 
     const query = `
-      INSERT INTO jogos_salvos (usuario_id, loteria, dezenas)
+      INSERT INTO jogos_salvos (usuario_id, loteria, nome_jogo, dezenas)
       VALUES ${placeholders.join(", ")}
       RETURNING id
     `;
@@ -832,7 +819,7 @@ const conferirJogoSimples = async (req, res) => {
     // 1. Verificar se o jogo pertence ao usuário
     const jogoResult = await pool.query(
       "SELECT * FROM jogos_salvos WHERE id = $1 AND usuario_id = $2",
-      [id, usuarioId]
+      [id, usuarioId],
     );
 
     if (jogoResult.rows.length === 0) {
@@ -851,7 +838,7 @@ const conferirJogoSimples = async (req, res) => {
         `SELECT concurso, dezenas 
          FROM ${jogo.loteria} 
          ORDER BY concurso DESC 
-         LIMIT 1`
+         LIMIT 1`,
       );
     } catch (error) {
       return res.status(404).json({
@@ -871,7 +858,7 @@ const conferirJogoSimples = async (req, res) => {
 
     // 3. Contar acertos (dezenas em comum)
     const acertos = jogo.dezenas.filter((dezena) =>
-      ultimoConcurso.dezenas.includes(dezena)
+      ultimoConcurso.dezenas.includes(dezena),
     ).length;
 
     // 4. Verificar se é premiado
@@ -902,7 +889,7 @@ const conferirJogoSimples = async (req, res) => {
            concurso_conferido = $2,
            updated_at = NOW()
        WHERE id = $3`,
-      [acertos, ultimoConcurso.concurso, id]
+      [acertos, ultimoConcurso.concurso, id],
     );
 
     // 6. Registrar no histórico (SEM ON CONFLICT)
@@ -910,7 +897,7 @@ const conferirJogoSimples = async (req, res) => {
       await pool.query(
         `INSERT INTO historico_conferencias (jogo_id, concurso, acertos, premiado)
          VALUES ($1, $2, $3, $4)`,
-        [id, ultimoConcurso.concurso, acertos, premiado]
+        [id, ultimoConcurso.concurso, acertos, premiado],
       );
     } catch (histError) {
       // Se já existe, ignora silenciosamente
@@ -953,7 +940,7 @@ const conferirTodosSimples = async (req, res) => {
     // Buscar todos os jogos do usuário
     const jogosResult = await pool.query(
       "SELECT * FROM jogos_salvos WHERE usuario_id = $1",
-      [usuarioId]
+      [usuarioId],
     );
 
     console.log(`📦 Total de jogos encontrados: ${jogosResult.rows.length}`);
@@ -1014,7 +1001,7 @@ const conferirTodosSimples = async (req, res) => {
         // 🎯 CONTAR ACERTOS
         // ============================================
         const acertos = jogo.dezenas.filter((d) =>
-          dezenasSorteadas.includes(d)
+          dezenasSorteadas.includes(d),
         ).length;
 
         // ============================================
@@ -1051,7 +1038,7 @@ const conferirTodosSimples = async (req, res) => {
               updated_at = NOW()
           WHERE id = $3
         `,
-          [acertos, concurso, jogo.id]
+          [acertos, concurso, jogo.id],
         );
 
         // ============================================
@@ -1064,7 +1051,7 @@ const conferirTodosSimples = async (req, res) => {
               (jogo_id, concurso, acertos, premiado)
             VALUES ($1, $2, $3, $4)
           `,
-            [jogo.id, concurso, acertos, premiado]
+            [jogo.id, concurso, acertos, premiado],
           );
         } catch (histError) {
           if (histError.code !== "23505") {
@@ -1078,7 +1065,7 @@ const conferirTodosSimples = async (req, res) => {
         console.log(
           `✅ Jogo ${jogo.id}: ${acertos} acertos (Concurso ${concurso})${
             premiado ? " 🏆" : ""
-          }`
+          }`,
         );
       } catch (err) {
         console.error(`❌ Erro ao conferir jogo ${jogo.id}:`, err.message);
@@ -1135,7 +1122,7 @@ const excluirJogosEmLote = async (req, res) => {
         AND usuario_id = $2
       RETURNING id
       `,
-      [ids, usuarioId]
+      [ids, usuarioId],
     );
 
     return res.json({
@@ -1151,6 +1138,288 @@ const excluirJogosEmLote = async (req, res) => {
     });
   }
 };
+
+// ============================================
+// ✏️ ATUALIZAR NOME DO JOGO
+// ============================================
+const atualizarNomeGrupo = async (req, res) => {
+  const usuarioId = req.usuario.id;
+  const { nome_antigo, nome_novo } = req.body;
+
+  if (!nome_novo || nome_novo.trim() === "") {
+    return res.status(400).json({
+      success: false,
+      message: "Nome inválido",
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+      UPDATE jogos_salvos
+      SET nome_jogo = $1, updated_at = NOW()
+      WHERE nome_jogo = $2
+        AND usuario_id = $3
+      `,
+      [nome_novo.trim(), nome_antigo, usuarioId],
+    );
+
+    return res.json({
+      success: true,
+      total: result.rowCount,
+    });
+  } catch (error) {
+    console.error("Erro ao atualizar grupo:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro interno",
+    });
+  }
+};
+
+// ============================================
+// 🗑 REMOVER NOME DO GRUPO (CORRETO)
+// ============================================
+const removerNomeGrupo = async (req, res) => {
+  const usuarioId = req.usuario.id;
+  const { nome } = req.body;
+
+  if (!nome) {
+    return res.status(400).json({
+      success: false,
+      message: "Nome do grupo não informado",
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+      UPDATE jogos_salvos
+      SET nome_jogo = NULL,
+          updated_at = NOW()
+      WHERE nome_jogo = $1
+        AND usuario_id = $2
+      `,
+      [nome, usuarioId],
+    );
+
+    return res.json({
+      success: true,
+      total: result.rowCount,
+    });
+  } catch (error) {
+    console.error("Erro ao remover nome do grupo:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro interno",
+    });
+  }
+};
+
+// ============================================
+// 📁 GRUPOS (CRUD)
+// ============================================
+
+// ✅ LISTAR GRUPOS POR LOTERIA
+const listarGrupos = async (req, res) => {
+  try {
+    const usuarioId = req.usuario.id;
+    const { loteria } = req.query;
+
+    if (!loteria) {
+      return res.status(400).json({
+        success: false,
+        message: "Informe a loteria",
+      });
+    }
+
+    const result = await pool.query(
+      `
+      SELECT nome
+      FROM grupos
+      WHERE usuario_id = $1 AND loteria = $2
+      ORDER BY nome ASC
+      `,
+      [usuarioId, loteria],
+    );
+
+    res.json({
+      success: true,
+      data: result.rows.map((r) => r.nome),
+    });
+  } catch (error) {
+    console.error("Erro ao listar grupos:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro ao listar grupos",
+    });
+  }
+};
+
+// ✅ CRIAR GRUPO
+const criarGrupo = async (req, res) => {
+  try {
+    const usuarioId = req.usuario.id;
+    const { nome, loteria } = req.body;
+
+    if (!loteria) {
+      return res.status(400).json({ success: false, message: "Loteria inválida" });
+    }
+
+    const nomeLimpo = (nome || "").trim();
+    if (!nomeLimpo) {
+      return res.status(400).json({ success: false, message: "Nome inválido" });
+    }
+
+    const result = await pool.query(
+      `
+      INSERT INTO grupos (usuario_id, loteria, nome)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (usuario_id, loteria, nome)
+      DO NOTHING
+      RETURNING id, nome
+      `,
+      [usuarioId, loteria, nomeLimpo],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Já existe um grupo com esse nome nesta loteria",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Grupo criado com sucesso",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Erro ao criar grupo:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao criar grupo",
+    });
+  }
+};
+
+// ✅ RENOMEAR GRUPO (atualiza tabela grupos + jogos_salvos)
+const renomearGrupo = async (req, res) => {
+  try {
+    const usuarioId = req.usuario.id;
+    const { loteria, nome_antigo, nome_novo } = req.body;
+
+    const antigo = (nome_antigo || "").trim();
+    const novo = (nome_novo || "").trim();
+
+    if (!loteria || !antigo || !novo) {
+      return res.status(400).json({
+        success: false,
+        message: "Dados inválidos",
+      });
+    }
+
+    if (antigo === novo) {
+      return res.json({ success: true, message: "Nada para atualizar", total: 0 });
+    }
+
+    // 1) Renomeia na tabela grupos
+    const upGrupo = await pool.query(
+      `
+      UPDATE grupos
+      SET nome = $1, updated_at = NOW()
+      WHERE usuario_id = $2 AND loteria = $3 AND nome = $4
+      RETURNING id
+      `,
+      [novo, usuarioId, loteria, antigo],
+    );
+
+    if (upGrupo.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Grupo não encontrado",
+      });
+    }
+
+    // 2) Reflete nos jogos salvos (se houver)
+    const upJogos = await pool.query(
+      `
+      UPDATE jogos_salvos
+      SET nome_jogo = $1, updated_at = NOW()
+      WHERE usuario_id = $2 AND loteria = $3 AND nome_jogo = $4
+      `,
+      [novo, usuarioId, loteria, antigo],
+    );
+
+    return res.json({
+      success: true,
+      message: "Grupo renomeado",
+      data: { jogosAtualizados: upJogos.rowCount },
+    });
+  } catch (error) {
+    console.error("Erro ao renomear grupo:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao renomear grupo",
+    });
+  }
+};
+
+// ✅ EXCLUIR GRUPO (remove da tabela grupos + limpa nome_jogo dos jogos_salvos)
+const excluirGrupo = async (req, res) => {
+  try {
+    const usuarioId = req.usuario.id;
+    const { loteria, nome } = req.body;
+
+    const nomeLimpo = (nome || "").trim();
+    if (!loteria || !nomeLimpo) {
+      return res.status(400).json({
+        success: false,
+        message: "Dados inválidos",
+      });
+    }
+
+    // 1) Remove da tabela grupos
+    const del = await pool.query(
+      `
+      DELETE FROM grupos
+      WHERE usuario_id = $1 AND loteria = $2 AND nome = $3
+      RETURNING id
+      `,
+      [usuarioId, loteria, nomeLimpo],
+    );
+
+    if (del.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Grupo não encontrado",
+      });
+    }
+
+    // 2) Limpa nos jogos salvos (não apaga jogos!)
+    const upJogos = await pool.query(
+      `
+      UPDATE jogos_salvos
+      SET nome_jogo = NULL, updated_at = NOW()
+      WHERE usuario_id = $1 AND loteria = $2 AND nome_jogo = $3
+      `,
+      [usuarioId, loteria, nomeLimpo],
+    );
+
+    return res.json({
+      success: true,
+      message: "Grupo removido",
+      data: { jogosAtualizados: upJogos.rowCount },
+    });
+  } catch (error) {
+    console.error("Erro ao excluir grupo:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Erro ao remover grupo",
+    });
+  }
+};
+
 
 // ============================================
 // ATUALIZAR module.exports
@@ -1170,4 +1439,10 @@ module.exports = {
   salvarJogosLote,
   conferirJogoSimples,
   conferirTodosSimples,
+  atualizarNomeGrupo,
+  removerNomeGrupo,
+  listarGrupos,
+  criarGrupo,
+  renomearGrupo,
+  excluirGrupo,
 };
