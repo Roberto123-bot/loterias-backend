@@ -6,6 +6,7 @@ const pool = require("./config/database");
 const errorHandler = require("./middlewares/errorHandler");
 const resultadosRoutes = require("./routes/resultadosRoutes");
 const loteriasRoutes = require("./routes/loteriasRoutes");
+const analiseRoutes = require("./routes/analiseRoutes");
 
 // ============================================
 // CONFIGURAÇÃO DE CORS - MUITO IMPORTANTE! ⭐
@@ -95,8 +96,8 @@ const { iniciarAgendador } = require("./services/agendador");
 // ============================================
 // MIDDLEWARES (ORDEM CORRETA)
 // ============================================
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static("src/public"));
 
 // Middleware de log
@@ -113,6 +114,11 @@ app.use("/api/jogos", jogosRoutes);
 app.use("/usuarios", usuarioRoutes);
 app.use("/api/resultados", resultadosRoutes);
 app.use("/api/loterias", loteriasRoutes);
+
+// ============================================
+// ROTAS DE ANÁLISE DE DEZENAS
+// ============================================
+app.use("/api/analise", analiseRoutes);
 
 // ============================================
 // ROTAS DE PLANOS

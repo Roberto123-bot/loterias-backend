@@ -1,3 +1,5 @@
+// VERIFICAR PLANO
+
 function verificarPlano(planoNecessario = "pro") {
   return (req, res, next) => {
     try {
