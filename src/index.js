@@ -20,6 +20,7 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
   "http://localhost:5500",
   "http://127.0.0.1:5500",
+  "http://127.0.0.1:5501",
   "https://loterias-frontend.vercel.app",
   "https://robertoloterias.com.br",
   "https://www.robertoloterias.com.br",

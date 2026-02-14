@@ -24,6 +24,9 @@ router.get("/ultimos-todos", async (req, res) => {
       WITH
       m AS (
         SELECT 'megasena' AS loteria, concurso, dezenas,
+              acumulou,
+              premiacoes,
+              valor_estimado_proximo,
               NULL::int[] AS dezenas_2,
               NULL::int[] AS trevos,
               NULL::text  AS mes_sorte,
@@ -34,6 +37,9 @@ router.get("/ultimos-todos", async (req, res) => {
       ),
       lf AS (
         SELECT 'lotofacil', concurso, dezenas,
+              acumulou,
+              premiacoes,
+              valor_estimado_proximo,
               NULL::int[],
               NULL::int[],
               NULL::text,
@@ -44,6 +50,9 @@ router.get("/ultimos-todos", async (req, res) => {
       ),
       q AS (
         SELECT 'quina', concurso, dezenas,
+              acumulou,
+              premiacoes,
+              valor_estimado_proximo,
               NULL::int[],
               NULL::int[],
               NULL::text,
@@ -54,6 +63,9 @@ router.get("/ultimos-todos", async (req, res) => {
       ),
       lm AS (
         SELECT 'lotomania', concurso, dezenas,
+              acumulou,
+              premiacoes,
+              valor_estimado_proximo,
               NULL::int[],
               NULL::int[],
               NULL::text,
@@ -64,6 +76,9 @@ router.get("/ultimos-todos", async (req, res) => {
       ),
       ds AS (
         SELECT 'duplasena', concurso, dezenas_1 AS dezenas,
+              acumulou,
+              premiacoes,
+              valor_estimado_proximo,
               dezenas_2,
               NULL::int[],
               NULL::text,
@@ -74,6 +89,9 @@ router.get("/ultimos-todos", async (req, res) => {
       ),
       tm AS (
         SELECT 'timemania', concurso, dezenas,
+              acumulou,
+              premiacoes,
+              valor_estimado_proximo,
               NULL::int[],
               NULL::int[],
               NULL::text,
@@ -84,6 +102,9 @@ router.get("/ultimos-todos", async (req, res) => {
       ),
       dd AS (
         SELECT 'diadasorte', concurso, dezenas,
+              acumulou,
+              premiacoes,
+              valor_estimado_proximo,
               NULL::int[],
               NULL::int[],
               mes_sorte,
@@ -94,6 +115,9 @@ router.get("/ultimos-todos", async (req, res) => {
       ),
       mm AS (
         SELECT 'maismilionaria', concurso, dezenas,
+              acumulou,
+              premiacoes,
+              valor_estimado_proximo,
               NULL::int[],
               trevos,
               NULL::text,

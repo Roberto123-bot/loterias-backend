@@ -98,31 +98,46 @@ async function buscarConcursoCaixa(loteriaId, numeroConcurso = null) {
 function formatarDados(loteriaId, dados) {
   const config = LOTERIAS_CONFIG[loteriaId];
 
-  // Extrair dezenas (números sorteados)
+  // ================================
+  // 🔢 Extrair dezenas
+  // ================================
   let dezenas = [];
 
   if (loteriaId === "duplasena") {
-    // Dupla-Sena tem 2 sorteios
+    // Dupla-Sena tem dois sorteios
     const sorteio1 = dados.listaDezenas?.slice(0, 6) || [];
-    const sorteio2 = dados.listaDezenas?.slice(6, 12) || [];
-    dezenas = [...sorteio1, ...sorteio2];
-  } else if (loteriaId === "lotomania") {
-    // Lotomania tem 20 números
-    dezenas = dados.listaDezenas || [];
+    const sorteio2 = dados.listaDezenasSegundoSorteio || [];
+    dezenas = [...sorteio1, ...sorteio2].map(Number);
   } else {
-    // Outras loterias
-    dezenas = dados.listaDezenas || [];
+    dezenas = (dados.listaDezenas || []).map(Number);
   }
+
+  // ================================
+  // 🏆 Verificar se teve ganhador na faixa principal
+  // ================================
+  const ganhadoresFaixa1 =
+    dados.listaRateioPremio?.[0]?.numeroDeGanhadores ?? 0;
+
+  const acumulou = ganhadoresFaixa1 === 0;
+
+  // ================================
+  // 💰 Valor acumulado
+  // ================================
+  const valorAcumulado =
+    parseFloat(dados.valorAcumuladoProximoConcurso) || 0;
 
   return {
     concurso: dados.numero,
     data_sorteio: dados.dataApuracao,
-    dezenas: dezenas,
-    acumulou: dados.acumulado === "SIM",
-    valor_acumulado: parseFloat(dados.valorAcumuladoProximoConcurso || 0),
+    dezenas,
+    acumulou,
+    valor_acumulado: valorAcumulado,
+    valor_estimado_proximo: parseFloat(dados.valorEstimadoProximoConcurso) || 0,
     data_proximo_concurso: dados.dataProximoConcurso,
+    premiacoes: dados.listaRateioPremio || [] // 👈 ADICIONE ISSO
   };
 }
+
 
 /**
  * Inserir concurso no banco de dados
@@ -139,11 +154,30 @@ async function inserirConcurso(loteriaId, dados) {
     );
 
     if (existe.rows.length > 0) {
-      console.log(
-        `⚠️  Concurso ${dadosFormatados.concurso} de ${config.nome} já existe`
+
+      // 🔄 Atualizar acumulou se já existir
+      await pool.query(
+        `UPDATE ${config.tabela}
+          SET acumulou = $1,
+              valor_estimado_proximo = $2,
+              premiacoes = $3
+          WHERE concurso = $4`,
+        [
+          dadosFormatados.acumulou,                     // $1
+          dadosFormatados.valor_estimado_proximo,       // $2
+          JSON.stringify(dadosFormatados.premiacoes),   // $3
+          dadosFormatados.concurso                      // $4
+        ]
       );
-      return { success: false, message: "Concurso já existe" };
+
+
+      console.log(
+        `🔄 Concurso ${dadosFormatados.concurso} de ${config.nome} atualizado (acumulou + premiacoes)!`
+      );
+
+      return { success: true, updated: true };
     }
+
 
     // Inserir novo concurso - tratamento especial para cada loteria
     if (loteriaId === "duplasena") {
@@ -152,9 +186,17 @@ async function inserirConcurso(loteriaId, dados) {
       const sorteio2 = dados.listaDezenasSegundoSorteio?.map(Number) || [];
 
       await pool.query(
-        `INSERT INTO ${config.tabela} (concurso, dezenas_1, dezenas_2, created_at) 
-         VALUES ($1, $2, $3, NOW())`,
-        [dadosFormatados.concurso, sorteio1, sorteio2]
+        `INSERT INTO ${config.tabela} 
+        (concurso, dezenas_1, dezenas_2, acumulou, valor_estimado_proximo, premiacoes, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+        [
+          dadosFormatados.concurso,
+          sorteio1,
+          sorteio2,
+          dadosFormatados.acumulou,
+          dadosFormatados.valor_estimado_proximo,
+          JSON.stringify(dadosFormatados.premiacoes)
+        ]
       );
     } else if (loteriaId === "maismilionaria") {
       // + Milionária tem 6 números + 2 trevos
@@ -162,34 +204,65 @@ async function inserirConcurso(loteriaId, dados) {
       const trevos = dados.trevosSorteados?.map(Number) || [];
 
       await pool.query(
-        `INSERT INTO ${config.tabela} (concurso, dezenas, trevos, created_at) 
-         VALUES ($1, $2, $3, NOW())`,
-        [dadosFormatados.concurso, numeros, trevos]
+        `INSERT INTO ${config.tabela} 
+        (concurso, dezenas, trevos, acumulou, valor_estimado_proximo, premiacoes, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+        [
+          dadosFormatados.concurso,
+          numeros,
+          trevos,
+          dadosFormatados.acumulou,
+          dadosFormatados.valor_estimado_proximo,
+          JSON.stringify(dadosFormatados.premiacoes)
+        ]
       );
     } else if (loteriaId === "timemania") {
       // Timemania tem dezenas + time do coração
       const timeCoracao = dados.nomeTimeCoracaoMesSorte || "";
 
       await pool.query(
-        `INSERT INTO ${config.tabela} (concurso, dezenas, time_coracao, created_at) 
-         VALUES ($1, $2, $3, NOW())`,
-        [dadosFormatados.concurso, dadosFormatados.dezenas, timeCoracao]
+        `INSERT INTO ${config.tabela} 
+        (concurso, dezenas, time_coracao, acumulou, valor_estimado_proximo, premiacoes, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+        [
+          dadosFormatados.concurso,
+          dadosFormatados.dezenas,
+          timeCoracao,
+          dadosFormatados.acumulou,
+          dadosFormatados.valor_estimado_proximo,
+          JSON.stringify(dadosFormatados.premiacoes)
+        ]
       );
     } else if (loteriaId === "diadesorte") {
       // Dia de Sorte tem dezenas + mês da sorte
       const mesSorte = dados.nomeTimeCoracaoMesSorte || "";
 
       await pool.query(
-        `INSERT INTO ${config.tabela} (concurso, dezenas, mes_sorte, created_at) 
-         VALUES ($1, $2, $3, NOW())`,
-        [dadosFormatados.concurso, dadosFormatados.dezenas, mesSorte]
+        `INSERT INTO ${config.tabela} 
+        (concurso, dezenas, mes_sorte, acumulou, valor_estimado_proximo, premiacoes, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+        [
+          dadosFormatados.concurso,
+          dadosFormatados.dezenas,
+          mesSorte,
+          dadosFormatados.acumulou,
+          dadosFormatados.valor_estimado_proximo,
+          JSON.stringify(dadosFormatados.premiacoes)
+        ]
       );
     } else {
-      // Outras loterias (padrão)
+      // ✅ VERSÃO CORRIGIDA DO INSERT PADRÃO
       await pool.query(
-        `INSERT INTO ${config.tabela} (concurso, dezenas, created_at) 
-         VALUES ($1, $2, NOW())`,
-        [dadosFormatados.concurso, dadosFormatados.dezenas]
+        `INSERT INTO ${config.tabela} 
+        (concurso, dezenas, acumulou, valor_estimado_proximo, premiacoes, created_at) 
+         VALUES ($1, $2, $3, $4, $5, NOW())`,
+        [
+          dadosFormatados.concurso,
+          dadosFormatados.dezenas,
+          dadosFormatados.acumulou,
+          dadosFormatados.valor_estimado_proximo,
+          JSON.stringify(dadosFormatados.premiacoes)
+        ]
       );
     }
 
@@ -235,12 +308,15 @@ async function atualizarLoteria(loteriaId) {
     const numeroUltimoCaixa = ultimoCaixa.numero;
     console.log(`   🌐 Último na Caixa: ${numeroUltimoCaixa}`);
 
-    // 3. Verificar se há novos concursos
+    // Sempre reprocessar o último concurso
     if (numeroUltimoCaixa <= ultimoBanco) {
-      console.log(`   ✅ ${config.nome} já está atualizada!`);
+      console.log(`🔄 Revalidando último concurso ${numeroUltimoCaixa}...`);
+
+      await inserirConcurso(loteriaId, ultimoCaixa);
+
       return {
         success: true,
-        message: "Já atualizado",
+        message: "Revalidado",
         novos: 0,
         loteria: config.nome,
       };
