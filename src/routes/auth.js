@@ -417,4 +417,69 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
+// ==========================================
+// ADMIN RESETAR SENHA DE USUÁRIO
+// ==========================================
+router.put("/admin/resetar-senha/:id", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Token não fornecido",
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    // 🔥 Verificar se é admin
+    if (decoded.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Acesso permitido apenas para ADMIN",
+      });
+    }
+
+    const { id } = req.params;
+    const { novaSenha } = req.body;
+
+    if (!novaSenha || novaSenha.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Nova senha deve ter no mínimo 6 caracteres",
+      });
+    }
+
+    // 🔐 Gerar hash
+    const senhaHash = await bcrypt.hash(novaSenha, SALT_ROUNDS);
+
+    await pool.query(
+      "UPDATE usuarios SET senha = $1 WHERE id = $2",
+      [senhaHash, id]
+    );
+
+    res.json({
+      success: true,
+      message: "Senha redefinida pelo administrador com sucesso",
+    });
+
+  } catch (error) {
+    console.error("Admin reset password error:", error);
+
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        success: false,
+        message: "Token expirado",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Erro ao redefinir senha",
+    });
+  }
+});
+
+
 module.exports = router;

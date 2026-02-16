@@ -25,6 +25,9 @@ router.get("/dashboard", adminController.getDashboard);
 router.get("/usuarios", adminController.listarUsuarios);
 router.get("/usuarios/:id", adminController.getUsuario);
 
+// Resetar senha de usuário
+router.put("/usuarios/:id/resetar-senha", adminController.resetarSenha);
+
 // Ativar/Desativar PRO
 router.post("/usuarios/:id/ativar", adminController.ativarPro);
 router.post("/usuarios/:id/desativar", adminController.desativarPro);

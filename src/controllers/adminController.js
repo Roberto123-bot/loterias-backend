@@ -366,6 +366,63 @@ const getAlertas = async (req, res) => {
 };
 
 // ============================================
+// RESETAR SENHA DE USUÁRIO (ADMIN)
+// ============================================
+const bcrypt = require("bcryptjs");
+const SALT_ROUNDS = 10;
+
+const resetarSenha = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { novaSenha } = req.body;
+
+    if (!novaSenha || novaSenha.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Nova senha deve ter no mínimo 6 caracteres",
+      });
+    }
+
+    // Verificar se usuário existe
+    const userCheck = await pool.query(
+      "SELECT id FROM usuarios WHERE id = $1",
+      [id]
+    );
+
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuário não encontrado",
+      });
+    }
+
+    const senhaHash = await bcrypt.hash(novaSenha, SALT_ROUNDS);
+
+    await pool.query(
+      "UPDATE usuarios SET senha = $1 WHERE id = $2",
+      [senhaHash, id]
+    );
+
+    console.log(
+      `🔐 ADMIN ${req.usuario.nome} (ID: ${req.usuario.id}) redefiniu senha do usuário ${id}`
+    );
+
+    res.json({
+      success: true,
+      message: "Senha redefinida com sucesso pelo administrador",
+    });
+
+  } catch (error) {
+    console.error("Erro ao resetar senha:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro ao redefinir senha",
+    });
+  }
+};
+
+
+// ============================================
 // EXPORTAR FUNÇÕES
 // ============================================
 module.exports = {
@@ -377,4 +434,5 @@ module.exports = {
   desativarPro,
   getHistorico,
   getAlertas,
+  resetarSenha,
 };
