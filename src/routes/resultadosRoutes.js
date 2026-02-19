@@ -5,7 +5,7 @@ const pool = require("../config/database");
 // Cache em memória (5 minutos)
 let cache = null;
 let cacheTime = null;
-const CACHE_TTL = 5 * 60 * 1000;
+const CACHE_TTL = 0;
 
 router.get("/ultimos-todos", async (req, res) => {
   try {

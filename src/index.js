@@ -7,6 +7,8 @@ const errorHandler = require("./middlewares/errorHandler");
 const resultadosRoutes = require("./routes/resultadosRoutes");
 const loteriasRoutes = require("./routes/loteriasRoutes");
 const analiseRoutes = require("./routes/analiseRoutes");
+const cronRoutes = require("./routes/cronRoutes");
+
 
 // ============================================
 // CONFIGURAÇÃO DE CORS - MUITO IMPORTANTE! ⭐
@@ -135,6 +137,7 @@ app.use("/api/admin", adminRoutes);
 // ROTAS DE ATUALIZAÇÃO
 // ============================================
 app.use("/api/atualizar", atualizadorRoutes);
+app.use("/api", cronRoutes);
 
 // ============================================
 // ROTA RAIZ - DOCUMENTAÇÃO DA API

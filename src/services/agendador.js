@@ -8,7 +8,7 @@ function iniciarAgendador() {
   console.log("⏰ Agendador de atualizações iniciado!");
 
   // Executar a cada 6 horas (às 00:00, 06:00, 12:00, 18:00)
-  cron.schedule("0 22 * * *", async () => {
+  cron.schedule("*/5 * * * *", async () => {
     console.log("\n⏰ [AGENDADOR] Executando atualização automática...");
     console.log(`   Data/Hora: ${new Date().toLocaleString("pt-BR")}`);
 
