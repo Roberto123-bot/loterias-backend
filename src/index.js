@@ -372,12 +372,14 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log("🔐 JWT configurado:", !!process.env.JWT_SECRET);
 
   // Iniciar agendador de atualizações
-  const isDev = NODE_ENV === "development";
+  const isDevelopment = NODE_ENV === "development";
 
-  if (process.env.ENABLE_CRON === "true" || isDev) {
+  if (isDevelopment) {
+    console.log("⏰ Modo DESENVOLVIMENTO - Cron interno ativado");
     iniciarAgendador();
   } else {
-    console.log("⏸️  Agendador desativado");
+    console.log("🌍 Produção detectada - Cron interno DESATIVADO");
+    console.log("🛰️ Atualizações via cron-job.org");
   }
 
   console.log("=".repeat(50) + "\n");
