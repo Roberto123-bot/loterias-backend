@@ -1,46 +1,52 @@
 const cron = require("node-cron");
 const { atualizarTodasLoterias } = require("./atualizadorLoterias.js");
 
+let tarefaAgendada = null;
+
+async function executarAtualizacaoManual(origem = "manual") {
+  console.log(`\n⏰ [${origem.toUpperCase()}] Iniciando atualização...`);
+  console.log(`   Data/Hora: ${new Date().toLocaleString("pt-BR")}`);
+
+  try {
+    await atualizarTodasLoterias();
+    console.log(`   ✅ [${origem.toUpperCase()}] Atualização concluída com sucesso!\n`);
+    return { success: true, message: "Atualização concluída com sucesso" };
+  } catch (error) {
+    console.error(`   ❌ [${origem.toUpperCase()}] Erro na atualização:`, error.message);
+    return { success: false, message: error.message };
+  }
+}
+
 /**
  * Configurar agendamento automático de atualizações
  */
 function iniciarAgendador() {
+  if (tarefaAgendada) {
+    console.log("⚠️ Agendador já estava iniciado.");
+    return tarefaAgendada;
+  }
+
   console.log("⏰ Agendador de atualizações iniciado!");
 
-  // Executar a cada 6 horas (às 00:00, 06:00, 12:00, 18:00)
-  cron.schedule("*/5 * * * *", async () => {
-    console.log("\n⏰ [AGENDADOR] Executando atualização automática...");
-    console.log(`   Data/Hora: ${new Date().toLocaleString("pt-BR")}`);
-
-    try {
-      await atualizarTodasLoterias();
-      console.log("   ✅ [AGENDADOR] Atualização concluída com sucesso!\n");
-    } catch (error) {
-      console.error("   ❌ [AGENDADOR] Erro na atualização:", error.message);
-    }
+  tarefaAgendada = cron.schedule("*/5 * * * *", async () => {
+    await executarAtualizacaoManual("agendador");
   });
 
-  console.log("   📅 Próxima execução: a cada 6 horas");
-  console.log(
-    "   ⚙️  Para mudar frequência, edite src/services/agendador.js\n"
-  );
+  console.log("   📅 Próxima execução: a cada 5 minutos");
+  console.log("   ⚙️  Para mudar frequência, edite src/services/agendador.js\n");
+
+  return tarefaAgendada;
 }
 
 /**
- * Executar atualização imediata ao iniciar o servidor (opcional)
+ * Executar atualização imediata ao iniciar o servidor
  */
 async function executarAoIniciar() {
-  console.log("🚀 Executando atualização inicial...\n");
-
-  try {
-    await atualizarTodasLoterias();
-    console.log("✅ Atualização inicial concluída!\n");
-  } catch (error) {
-    console.error("❌ Erro na atualização inicial:", error.message);
-  }
+  return await executarAtualizacaoManual("inicial");
 }
 
 module.exports = {
   iniciarAgendador,
   executarAoIniciar,
+  executarAtualizacaoManual,
 };

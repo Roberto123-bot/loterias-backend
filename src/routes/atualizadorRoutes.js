@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { executarAtualizacaoManual } = require("../services/agendador.js");
 const {
   atualizarLoteria,
   atualizarTodasLoterias,
@@ -7,62 +8,70 @@ const {
   LOTERIAS_CONFIG,
 } = require("../services/atualizadorLoterias.js");
 
-// Middleware de autenticação (opcional - descomente se quiser proteger)
-// const { verificarToken } = require('../middleware/auth');
-// router.use(verificarToken);
-
 /**
- * GET /api/atualizar
- * Atualizar todas as loterias
+ * GET /api/atualizar/forcar
+ * Forçar atualização manual pelo navegador
  */
-router.get("/", async (req, res) => {
-  try {
-    const resultado = await atualizarTodasLoterias();
+router.get("/forcar", async (req, res) => {
+  const secret = req.query.secret;
 
-    res.json({
-      success: true,
-      message: "Atualização concluída",
-      data: resultado,
-    });
-  } catch (error) {
-    console.error("Erro ao atualizar loterias:", error);
-    res.status(500).json({
+  console.log("🔐 Secret recebida?", !!secret);
+  console.log("🔐 Bate com env?", secret === process.env.CRON_SECRET);
+
+  if (secret !== process.env.CRON_SECRET) {
+    return res.status(403).json({
       success: false,
-      message: "Erro ao atualizar loterias",
-      error: error.message,
+      message: "Acesso não autorizado",
     });
   }
+
+  console.log("🔥 ROTA /forcar CHAMADA");
+
+  const resultado = await executarAtualizacaoManual("rota-manual");
+
+  if (resultado.success) {
+    return res.json({
+      success: true,
+      message: resultado.message,
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: resultado.message,
+  });
 });
 
 /**
- * GET /api/atualizar/:loteria
- * Atualizar loteria específica
+ * GET /api/atualizar/status/loterias
+ * Ver status de todas as loterias (último concurso no banco)
  */
-router.get("/:loteria", async (req, res) => {
+router.get("/status/loterias", async (req, res) => {
   try {
-    const { loteria } = req.params;
+    const pool = require("../config/database");
+    const status = {};
 
-    // Validar loteria
-    if (!LOTERIAS_CONFIG[loteria]) {
-      return res.status(400).json({
-        success: false,
-        message: "Loteria inválida",
-        loteriasDisponiveis: Object.keys(LOTERIAS_CONFIG),
-      });
+    for (const [id, config] of Object.entries(LOTERIAS_CONFIG)) {
+      const result = await pool.query(
+        `SELECT MAX(concurso) as ultimo, COUNT(*) as total FROM ${config.tabela}`
+      );
+
+      status[id] = {
+        nome: config.nome,
+        ultimoConcurso: result.rows[0].ultimo,
+        totalConcursos: parseInt(result.rows[0].total),
+      };
     }
-
-    const resultado = await atualizarLoteria(loteria);
 
     res.json({
       success: true,
-      message: "Atualização concluída",
-      data: resultado,
+      data: status,
+      timestamp: new Date(),
     });
   } catch (error) {
-    console.error(`Erro ao atualizar ${req.params.loteria}:`, error);
     res.status(500).json({
       success: false,
-      message: "Erro ao atualizar loteria",
+      message: "Erro ao buscar status",
       error: error.message,
     });
   }
@@ -106,35 +115,57 @@ router.get("/testar/:loteria/:concurso", async (req, res) => {
 });
 
 /**
- * GET /api/atualizar/status/loterias
- * Ver status de todas as loterias (último concurso no banco)
+ * GET /api/atualizar/:loteria
+ * Atualizar loteria específica
  */
-router.get("/status/loterias", async (req, res) => {
+router.get("/:loteria", async (req, res) => {
+  console.log("⚠️ ROTA /:loteria CHAMADA:", req.params.loteria);
   try {
-    const pool = require("../config/database");
-    const status = {};
+    const { loteria } = req.params;
 
-    for (const [id, config] of Object.entries(LOTERIAS_CONFIG)) {
-      const result = await pool.query(
-        `SELECT MAX(concurso) as ultimo, COUNT(*) as total FROM ${config.tabela}`
-      );
-
-      status[id] = {
-        nome: config.nome,
-        ultimoConcurso: result.rows[0].ultimo,
-        totalConcursos: parseInt(result.rows[0].total),
-      };
+    if (!LOTERIAS_CONFIG[loteria]) {
+      return res.status(400).json({
+        success: false,
+        message: "Loteria inválida",
+        loteriasDisponiveis: Object.keys(LOTERIAS_CONFIG),
+      });
     }
+
+    const resultado = await atualizarLoteria(loteria);
 
     res.json({
       success: true,
-      data: status,
-      timestamp: new Date(),
+      message: "Atualização concluída",
+      data: resultado,
     });
   } catch (error) {
+    console.error(`Erro ao atualizar ${req.params.loteria}:`, error);
     res.status(500).json({
       success: false,
-      message: "Erro ao buscar status",
+      message: "Erro ao atualizar loteria",
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * GET /api/atualizar
+ * Atualizar todas as loterias
+ */
+router.get("/", async (req, res) => {
+  try {
+    const resultado = await atualizarTodasLoterias();
+
+    res.json({
+      success: true,
+      message: "Atualização concluída",
+      data: resultado,
+    });
+  } catch (error) {
+    console.error("Erro ao atualizar loterias:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro ao atualizar loterias",
       error: error.message,
     });
   }
