@@ -1,0 +1,60 @@
+services:
+    postgres:
+        image: postgres:15-alpine
+        container_name: meu-postgres
+        restart: always
+        environment:
+            POSTGRES_USER: ${DB_USER}
+            POSTGRES_PASSWORD: ${DB_PASSWORD}
+            POSTGRES_DB: ${DB_NAME}
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        networks:
+            - app-network
+
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: meu-app-node
+        restart: always
+        env_file:
+            - .env
+        environment:
+            NODE_ENV: production
+            DB_HOST: postgres
+            DB_PORT: 5432
+            DB_USER: ${DB_USER}
+            DB_PASSWORD: ${DB_PASSWORD}
+            DB_NAME: ${DB_NAME}
+        ports:
+            - "3000:3000"
+        depends_on:
+            postgres:
+                condition: service_healthy
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1",
+                ]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+            start_period: 20s
+        networks:
+            - app-network
+
+volumes:
+    postgres_data:
+        name: meu-projeto-postgres-data
+        driver: local
+
+networks:
+    app-network:
+        driver: bridge

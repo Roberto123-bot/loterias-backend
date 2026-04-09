@@ -1,0 +1,35 @@
+# Dependências
+**/node_modules
+
+# Logs
+npm-debug.log
+*.log
+logs/
+
+# Git
+.git
+.gitignore
+
+# Variáveis de ambiente
+.env
+.env.*
+!.env.example
+
+# Editor
+.vscode
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Backups e arquivos pesados locais
+backup-limpeza-2026-01-05_20-53-10/
+backups/
+*.zip
+*.sql
+*.bak
+
+# Temporários e cache
+*.tmp
+*.temp
+.cache
