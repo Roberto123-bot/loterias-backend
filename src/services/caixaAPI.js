@@ -22,24 +22,14 @@ class CaixaAPI {
 
     async request(url) {
         try {
-            console.log(`🌐 CaixaAPI -> ${url}`);
-
             const response = await this.client.get(url, {
                 signal: AbortSignal.timeout(15000),
             });
-
             return response.data;
         } catch (error) {
-            console.error(`❌ Erro HTTP Caixa (${this.loteria})`);
-            console.error("Mensagem:", error.message);
-
-            if (error.code) console.error("Code:", error.code);
-            if (error.response) {
-                console.error("Status:", error.response.status);
-                console.error("Headers:", error.response.headers);
-                console.error("Body:", error.response.data);
-            }
-
+            console.error(
+                `❌ CaixaAPI (${this.loteria}): ${error.message}${error.code ? ` [${error.code}]` : ""}${error.response ? ` | status ${error.response.status}` : ""}`,
+            );
             return null;
         }
     }

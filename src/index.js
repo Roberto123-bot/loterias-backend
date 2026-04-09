@@ -9,21 +9,6 @@ const loteriasRoutes = require("./routes/loteriasRoutes");
 const analiseRoutes = require("./routes/analiseRoutes");
 const cronRoutes = require("./routes/cronRoutes");
 
-const fs = require("fs");
-
-console.log("NODE_EXTRA_CA_CERTS =", process.env.NODE_EXTRA_CA_CERTS);
-console.log("PEM exists =", fs.existsSync("/app/certs/caixa-chain.pem"));
-
-const pemPath = "/app/certs/caixa-chain.pem";
-
-if (fs.existsSync(pemPath)) {
-    const pem = fs.readFileSync(pemPath, "utf8");
-    const certCount = (pem.match(/-----BEGIN CERTIFICATE-----/g) || []).length;
-
-    console.log("PEM cert count =", certCount);
-    console.log("PEM size =", pem.length);
-}
-
 // ============================================
 // CONFIGURAÇÃO DE CORS - MUITO IMPORTANTE! ⭐
 // ============================================
