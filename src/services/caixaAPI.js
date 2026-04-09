@@ -1,67 +1,87 @@
+const axios = require("axios");
+
 class CaixaAPI {
-  constructor(loteria, config = {}) {
-    this.loteria = loteria;
-    this.config = config;
-    this.baseURL = `https://servicebus2.caixa.gov.br/portaldeloterias/api/${loteria}`;
-  }
+    constructor(loteria) {
+        this.loteria = loteria;
+        this.baseURL = `https://servicebus3.caixa.gov.br/portaldeloterias/api/${loteria}`;
 
-  async buscarUltimo() {
-    try {
-      const response = await fetch(this.baseURL);
-      if (!response.ok) return null;
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error(
-        `Erro ao buscar último concurso de ${this.loteria}:`,
-        error.message
-      );
-      return null;
-    }
-  }
-
-  async buscarConcurso(numero) {
-    try {
-      const response = await fetch(`${this.baseURL}/${numero}`);
-      if (!response.ok) return null;
-      const data = await response.json();
-      return this.formatarDados(data);
-    } catch (error) {
-      return null;
-    }
-  }
-
-  formatarDados(dados) {
-    if (!dados || !dados.listaDezenas) return null;
-
-    const dezenas = dados.listaDezenas.map((d) => parseInt(d));
-
-    const resultado = {
-      concurso: dados.numero,
-      dezenas: dezenas,
-    };
-
-    // Dupla-Sena tem 2 sorteios
-    if (this.loteria === "duplasena" && dados.listaDezenasSegundoSorteio) {
-      resultado.dezenas_2 = dados.listaDezenasSegundoSorteio.map((d) =>
-        parseInt(d)
-      );
-      delete resultado.dezenas;
-      resultado.dezenas_1 = dezenas;
+        this.client = axios.create({
+            timeout: 15000,
+            headers: {
+                Accept: "application/json",
+                "User-Agent": "SistemaLoterias/1.0",
+            },
+            maxRedirects: 5,
+            validateStatus: (status) => status >= 200 && status < 300,
+        });
     }
 
-    // Dia de Sorte tem mês
-    if (this.loteria === "diadesorte" && dados.nomeTimeCoracaoMesSorte) {
-      resultado.mes_sorte = dados.nomeTimeCoracaoMesSorte;
+    async request(url) {
+        try {
+            console.log(`🌐 CaixaAPI -> ${url}`);
+
+            const response = await this.client.get(url, {
+                signal: AbortSignal.timeout(15000),
+            });
+
+            return response.data;
+        } catch (error) {
+            console.error(`❌ Erro HTTP Caixa (${this.loteria})`);
+            console.error("Mensagem:", error.message);
+
+            if (error.code) console.error("Code:", error.code);
+            if (error.response) {
+                console.error("Status:", error.response.status);
+            }
+
+            return null;
+        }
     }
 
-    // Timemania tem time
-    if (this.loteria === "timemania" && dados.nomeTimeCoracaoMesSorte) {
-      resultado.time_coracao = dados.nomeTimeCoracaoMesSorte;
+    async buscarUltimo() {
+        const data = await this.request(this.baseURL);
+        return data ? this.formatarDados(data) : null;
     }
 
-    return resultado;
-  }
+    async buscarConcurso(numero) {
+        const data = await this.request(`${this.baseURL}/${numero}`);
+        return data ? this.formatarDados(data) : null;
+    }
+
+    formatarDados(dados) {
+        if (!dados) return null;
+
+        const resultado = {
+            numero: dados.numero,
+            dataApuracao: dados.dataApuracao,
+            dataProximoConcurso: dados.dataProximoConcurso,
+            valorEstimadoProximoConcurso:
+                parseFloat(dados.valorEstimadoProximoConcurso) || 0,
+            valorAcumuladoProximoConcurso:
+                parseFloat(dados.valorAcumuladoProximoConcurso) || 0,
+            listaRateioPremio: dados.listaRateioPremio || [],
+            listaDezenas: (dados.listaDezenas || []).map(Number),
+        };
+
+        if (this.loteria === "duplasena") {
+            resultado.listaDezenasSegundoSorteio = (
+                dados.listaDezenasSegundoSorteio || []
+            ).map(Number);
+        }
+
+        if (this.loteria === "timemania" || this.loteria === "diadesorte") {
+            resultado.nomeTimeCoracaoMesSorte =
+                dados.nomeTimeCoracaoMesSorte || "";
+        }
+
+        if (this.loteria === "maismilionaria") {
+            resultado.trevosSorteados = (dados.trevosSorteados || []).map(
+                Number,
+            );
+        }
+
+        return resultado;
+    }
 }
 
 module.exports = CaixaAPI;
