@@ -8,10 +8,14 @@ class CaixaAPI {
         this.client = axios.create({
             timeout: 15000,
             headers: {
-                Accept: "application/json",
-                "User-Agent": "SistemaLoterias/1.0",
+                Accept: "application/json, text/plain, */*",
+                "User-Agent":
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+                Referer: "https://loterias.caixa.gov.br/",
+                Origin: "https://loterias.caixa.gov.br",
+                Connection: "keep-alive",
             },
-            maxRedirects: 5,
             validateStatus: (status) => status >= 200 && status < 300,
         });
     }
@@ -32,6 +36,8 @@ class CaixaAPI {
             if (error.code) console.error("Code:", error.code);
             if (error.response) {
                 console.error("Status:", error.response.status);
+                console.error("Headers:", error.response.headers);
+                console.error("Body:", error.response.data);
             }
 
             return null;
